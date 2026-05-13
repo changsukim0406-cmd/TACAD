@@ -1,3 +1,3 @@
-# MC-DGS
+# TACAD
 
-Project page: https://cau-irislab.github.io/MC-DGS
+Project page: https://changsukim0406-cmd.github.io/TACAD

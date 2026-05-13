@@ -334,8 +334,7 @@
              alt="Our method achieves both high-fidelity rendering and geometrically accurate mesh reconstruction, resolving the trade-off inherent in prior dynamic Gaussian Splatting methods.">
       </figure>
       <h2 class="subtitle has-text-centered" style="margin-top: 1.5rem;">
-        Existing dynamic Gaussian Splatting methods face a persistent trade-off between rendering quality and mesh accuracy.
-        Our method resolves this by jointly improving both, yielding sharp renderings and clean mesh geometry across diverse dynamic scenes.
+        Qualitative comparison of 3D reconstruction samples for Yeonjeok, White Porcelain Ritual Vessel, and Seal. The first column shows reconstructions with the background preserved, while the second column illustrates results after applying our method.
       </h2>
     </div>
   </div>
@@ -349,21 +348,16 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            While 3D Gaussian Splatting (3DGS) has enabled high-quality reconstruction of dynamic scenes,
-            a persistent tension remains between Novel View Synthesis (NVS) fidelity and mesh geometric accuracy.
-            We argue that this arises because deformation modeling, surface alignment, and appearance expressiveness
-            compete for shared representational degrees of freedom. To mitigate this rendering–geometry trade-off,
-            we propose <strong>Multi-Canonical Dynamic Gaussian Splatting</strong>.
-          </p>
-          <p>
-            <strong>Multi-Canonical Deformation Modeling (MCDM)</strong> partitions the sequence into localized
-            temporal segments to reduce motion over-smoothing.
-            <strong>Surface-Aligned Anisotropic Densification (SAAD)</strong> initializes 2D Gaussians with scales
-            and rotations derived from local face geometry for more faithful surface support.
-            <strong>Residual-Based Expressiveness Restoration (RBER)</strong> restores fine appearance details
-            through sequential 3D and 2D residual refinement on top of a geometry-stabilized base.
-            Experiments on DG-Mesh, D-NeRF, and Nerfies show that our method improves the rendering–geometry
-            balance, yielding consistent gains in rendering quality while preserving or improving mesh accuracy.
+            High-fidelity 3D reconstruction is essential for the preservation, restoration, and digital archiving of cultural asset. 
+            However, state-of-the-art methods like Neural Radiance Fields (NeRF) and 3D Gaussian Splatting (3DGS) are sensitive to background elements, which can degrade the quality of the results. 
+            This challenge is particularly pronounced for cultural assets with intricate patterns and material properties, where inaccurate background segmentation can lead to significant artifacts. 
+            This research aims to systematically analyze the impact of background segmentation precision on the quality of 3D reconstruction. 
+            To this end, we developed an <strong>Iterative Segmentation</strong> technique to generate masks of varying accuracy by progressively refining them. 
+            By applying these intermediate masks to 3DGS reconstruction at each step, we quantitatively demonstrate the overall  improvement 
+            in reconstruction quality (measured by PSNR and SSIM) as segmentation accuracy increases. Furthermore, using the final refined mask as a baseline, 
+            we conduct a controlled study to compare the distinct effects of intentional “under-segmentation” (background leakage) and “over-segmentation” (object erosion) 
+            errors on the geometric and photometric fidelity of the 3D model. Our work provides a quantitative analysis of how different segmentation error types affect the reconstruction of cultural assets, 
+            underscoring the critical need for precise foreground isolation to achieve high-fidelity results.
           </p>
         </div>
       </div>
@@ -372,6 +366,7 @@
 </section>
 
 <!-- ─── Video Results ────────────────────────────────────────────────────── -->
+<!-- 나중에 실제 데이터 뽑으면 그때 교체 -->
 <section class="section hero is-light">
   <div class="container is-max-desktop">
     <h2 class="title is-3 has-text-centered">Video Results</h2>
@@ -409,6 +404,7 @@
 </section>
 
 <!-- ─── Video Comparison Slider ──────────────────────────────────────────── -->
+<!-- 나중에 실제 데이터 뽑으면 그때 교체 -->
 <section class="section">
   <div class="container is-max-desktop">
     <h2 class="title is-3 has-text-centered">Video Comparison</h2>
@@ -469,10 +465,11 @@
   </div>
 </section>
 
-<!-- ─── 3D Mesh Viewer ──────────────────────────────────────────────────── -->
+<!-- ─── 3D Results ──────────────────────────────────────────────────── -->
+<!-- 나중에 실제 데이터 뽑으면 그때 교체 -->
 <section class="section">
   <div class="container is-max-desktop">
-    <h2 class="title is-3 has-text-centered">3D Mesh Results</h2>
+    <h2 class="title is-3 has-text-centered">3D Results</h2>
     <p class="has-text-centered" style="margin-bottom: 2rem; color: #555;">
       Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan
     </p>
@@ -658,38 +655,34 @@ document.querySelectorAll('.mesh-frame-btns').forEach(function(btns) {
     </figure>
     <div class="content has-text-justified">
       <p>
-        Our pipeline integrates three core modules that progressively decouple the competing objectives
-        in dynamic Gaussian reconstruction — temporal deformation span, geometry-support formation,
-        and residual appearance modeling.
+        Overview of our iterative mask refinement method. First, we predict the candidate masks that could be the mask. 
+        Second, we select the mask with the highest probability of being an object among the candidate masks. 
+        We repeat the first and second steps, and finally, we refine the best mask obtained through this iteration into an object-centric mask.
       </p>
 
       <div class="method-block">
-        <strong>① Multi-Canonical Deformation Modeling (MCDM)</strong><br>
-        Addresses excessive temporal deformation span by partitioning the sequence into K localized
-        temporal groups, each assigned to an independent canonical Gaussian set. A global warm-up stage
-        first establishes a sequence-level prior, which is then cloned into K group-specific canonical sets.
-        Since each set covers only a restricted temporal segment, the deformation network operates over a
-        reduced motion range, mitigating over-smoothing and improving per-frame fidelity.
+        <strong>Iterative Segmentation</strong><br>
+        This iterative segmentation process contributes to generating more consistent and refined masks.  We begin by defining a bounding box (BB) covering the entire image area, expressed as:
+        T_"BB" =[(x_1,y_1,x_2,y_2 )].
+        Here, T_"BB"  is a two-dimensional tensor representing the BB, where each box is specified by the top-left and bottom-right coordinates. To apply Segment Anything Model (SAM) in the entire image region, we set T_"BB" =[(0,0,1,1)]. Subsequently, SAM is applied with T_"BB"  and I_"Init"  as inputs. In this context, SAM is represented as the function F_"SAM"  and F_"best"  is best selection process (detailed in Sec. 3.2). The F_"SAM"  outputs a total of three binary masks, denoted as M_L. For each of binary masks M_L, the object representation quality is evaluated, and the most suitable one is selected in each iteration level. This process is iterated L times until the generated mask converges to a sufficiently stable result. From the second iteration onward, the previous iteration's Best Mask, 〖F_"best"  (M〗_(l-1)), is multiplied with initial image I_"Init"  and used as the new input image instead of I_"Init" . This process can be formally described as:
+        M_l= F_"SAM"  (I_Init×〖F_"best"  (M〗_(l-1)),T_"BB" ).
+        Here, M_l represents the set of candidate masks generated at the current iteration l, while F_"best"  (M_(l-1)) denotes the single best mask selected from the previous iteration, l-1. For the initial iteration where l-1, F_"best"  (M_0)  is effectively a mask of all ones, meaning the process starts with the original, unmasked image I_Init. This iterative process is repeated for a total of L times to ensure convergence. For our experiments, we set the total number of iterations L=5.  The final background-removed image, I_final, is then produced by applying the best mask from the last iteration, M_L, to the initial image:
+        I_final=I_Init×〖F_"best"  (M〗_L)
       </div>
 
       <div class="method-block">
-        <strong>② Surface-Aligned Anisotropic Densification (SAAD)</strong><br>
-        Corrects the geometry-driven bias of conventional isotropic densification under mesh supervision.
-        Instead of inserting primitives at face centroids with isotropic scales, SAAD derives the initial
-        covariance of each new Gaussian from the eigendecomposition of local face vertex covariance,
-        aligning its tangent-plane support with the local surface structure. This turns densification from
-        a purely coverage-seeking operation into a surface-aligned refinement process, improving both
-        geometric coverage and mesh accuracy.
+        <strong>Best Mask Selecting</strong><br>
+        The selection of the optimal mask, m^*, from the set of candidates M_l  ={m_1,m_2,m_3} generated at each iteration l is formulated as an optimization problem. We aim to find the mask that maximizes a comprehensive scoring function, S(m), defined as:
+        m^*=argmax┬(m∈M_l )  S(m).
+        The scoring function evaluates the plausibility of a given mask by balancing a set of positive scores, S_p (m), and negative penalties, P_n (m). The overall function is expressed as:
+        S(m) = S_p (m) - P_n (m).
       </div>
 
       <div class="method-block">
-        <strong>③ Residual-Based Expressiveness Restoration (RBER)</strong><br>
-        Recovers the fine-scale appearance capacity attenuated by strong surface supervision. Built on top
-        of the geometry-stabilized base, RBER employs two sequential residual stages: a 3D Gaussian
-        deformation residual network (<em>f<sub>DR</sub></em>) that applies local parameter corrections to each
-        Gaussian, followed by a 2D image residual branch using a Local Texture Estimator (<em>f<sub>LTE</sub></em>)
-        that recovers remaining high-frequency texture discrepancy. This restores appearance details
-        without compromising the geometric consistency established by MCDM and SAAD.
+        <strong>Mask Refinement</strong><br>
+        Each candidate mask is scored and the highest-scoring one is refined with a four-stage pipeline. (1) Apply Gaussian smoothing to the raw mask m_raw and re-binarize at τ=0.5 to suppress small noise. (2) Perform morphological erosion to remove thin outlines and isolated artifacts. (3) Central contour selection for each contour k, compute:
+        S_cnt (k)=d_k/(d_max  )⋅ω_dist+√(A_k )/√(A_max )⋅ω_area,
+        where d_k is the Euclidean distance from the contour centroid to the image center, A_k is the contour area. d_max and A_max normalize distance and area respectively. Here we use ω_dist=0.6 and ω_area=0.4, and retain the contour with the largest S_cnt (k). (4) Apply a final erosion–dilation step to remove residual artifacts and recover structural coherence, yielding m_refine. The background-subtracted result is I_result = I_Init× m_refine.
       </div>
     </div>
   </div>
@@ -705,13 +698,7 @@ document.querySelectorAll('.mesh-frame-btns').forEach(function(btns) {
     </figure>
     <div class="content has-text-justified">
       <p>
-        We compare against state-of-the-art dynamic reconstruction methods — DG-Mesh and Dynamic-2DGS —
-        on the DG-Mesh and D-NeRF datasets. For each method, we show both the direct Gaussian Splatting (GS)
-        rendering and the extracted mesh surface.
-        DG-Mesh yields blurry renderings, and Dynamic-2DGS produces fragmented or incomplete surfaces
-        (e.g., missing parts in <em>Horse</em>).
-        Our method reconstructs sharp appearances with topologically clean meshes, achieving superior
-        performance in both rendering fidelity and geometric accuracy.
+        Ablation of iteration count (1 vs 5) on Glass Case, Glasses Frame Manufacturing Jig, and Korea Earthenware: progressive suppression of background noise and finer surface recovery.
       </p>
     </div>
   </div>
@@ -732,14 +719,7 @@ document.querySelectorAll('.mesh-frame-btns').forEach(function(btns) {
         </figure>
         <div class="content has-text-justified">
           <p>
-            We compare the baseline (single canonical space) against MCDM (multiple canonical spaces)
-            across an extended temporal sequence (T = 0, …, 10).
-            The baseline forces a single canonical representation to span the entire motion range,
-            causing the deformation network to over-smooth time-specific structures, leading to blurred
-            renderings and incoherent geometry.
-            MCDM redistributes temporal modeling burden across K canonical sets.
-            Since each canonical set covers only a localized segment, per-frame fidelity improves
-            substantially, yielding sharper appearances and more coherent mesh reconstruction.
+            <strong><red>NO IMAGES</red></strong>
           </p>
         </div>
       </div>
@@ -757,13 +737,7 @@ document.querySelectorAll('.mesh-frame-btns').forEach(function(btns) {
         </figure>
         <div class="content has-text-justified">
           <p>
-            We compare isotropic densification (baseline) against our Surface-Aligned Anisotropic
-            Densification (SAAD). Under mesh supervision, isotropic primitives inserted at face centroids
-            ignore local surface anisotropy, progressively degrading rendering quality as they accumulate
-            (visible blur at 10k → 25k iterations).
-            SAAD derives the initial covariance of each new Gaussian from local face vertex statistics
-            via eigendecomposition, producing surface-aligned primitives that preserve structural detail.
-            The result is sharper boundaries and cleaner local structure throughout training.
+            <strong><red>NO IMAGES</red></strong>
           </p>
         </div>
       </div>
@@ -778,9 +752,9 @@ document.querySelectorAll('.mesh-frame-btns').forEach(function(btns) {
     <h2 class="title">BibTeX</h2>
     <pre><code>@article{TODO,
   author  = {TODO},
-  title   = {Multi-Canonical Dynamic Gaussian Splatting for Accurate Geometry and High-Fidelity Rendering},
+  title   = {TOCAD},
   journal = {TODO},
-  year    = {2025}
+  year    = {2026}
 }</code></pre>
   </div>
 </section>
