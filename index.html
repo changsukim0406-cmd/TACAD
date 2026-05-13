@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Multi-Canonical Dynamic Gaussian Splatting for Accurate Geometry and High-Fidelity Rendering">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Multi-Canonical Dynamic Gaussian Splatting for Accurate Geometry and High-Fidelity Rendering"/>
+  <meta property="og:description" content="A unified framework that mitigates the trade-off between rendering fidelity and geometric accuracy in dynamic 3D Gaussian reconstruction via MCDM, SAAD, and RBER."/>
+  <meta property="og:url" content=""/>
+  <meta property="og:image" content="static/images/fig_teaser.png"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+
+  <!-- Twitter -->
+  <meta name="twitter:title" content="Multi-Canonical Dynamic Gaussian Splatting">
+  <meta name="twitter:description" content="A unified framework for accurate geometry and high-fidelity rendering of dynamic 3D scenes.">
+  <meta name="twitter:image" content="static/images/fig_teaser.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <meta name="keywords" content="Dynamic 3D Gaussian Splatting, Novel View Synthesis, Mesh Reconstruction, MCDM, SAAD, RBER, Dynamic Scene Reconstruction">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Multi-Canonical Dynamic Gaussian Splatting</title>
+  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+
+  <style>
+    /* ── Global ── */
+    html { scroll-behavior: smooth; }
+    body { background: #fafafa; }
+
+    /* ── Hero gradient (첫 번째 hero만) ── */
+    body > section.hero:first-of-type {
+      background: linear-gradient(135deg, #0f172a 0%, #1a3557 60%, #1e4d8c 100%) !important;
+    }
+    body > section.hero:first-of-type .title,
+    body > section.hero:first-of-type .subtitle,
+    body > section.hero:first-of-type .publication-title,
+    body > section.hero:first-of-type .publication-authors,
+    body > section.hero:first-of-type .eql-cntrb {
+      color: #e8edf5 !important;
+    }
+    body > section.hero:first-of-type a { color: #93c5fd; }
+
+    /* ── Section title accent ── */
+    .title.is-3 {
+      position: relative;
+      display: inline-block;
+      padding-bottom: 0.5rem;
+    }
+    .title.is-3::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 48px; height: 3px;
+      background: linear-gradient(90deg, #3273dc, #6db3f2);
+      border-radius: 2px;
+    }
+    .has-text-centered .title.is-3 { display: block; }
+    .has-text-centered .title.is-3::after { left: 50%; transform: translateX(-50%); }
+
+    /* ── Video label badge ── */
+    .video-label {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #3273dc;
+      background: #ebf3ff;
+      border-radius: 20px;
+      padding: 0.2rem 0.9rem;
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── Video card hover ── */
+    .video-grid .column { transition: transform 0.2s ease; }
+    .video-grid .column:hover { transform: translateY(-3px); }
+    .video-grid video {
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+      transition: box-shadow 0.2s ease;
+    }
+    .video-grid .column:hover video {
+      box-shadow: 0 8px 28px rgba(0,0,0,0.2);
+    }
+
+    /* ── 3D Mesh Viewer ── */
+    .mesh-viewer-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+      background: #1a1f2e;
+      cursor: grab;
+      transition: box-shadow 0.2s ease;
+    }
+    .mesh-viewer-wrap:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.28); }
+    .mesh-viewer-wrap:active { cursor: grabbing; }
+    .mesh-viewer-wrap canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    .mesh-frame-btns {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .mesh-btn {
+      padding: 0.3rem 1rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      border: 1.5px solid #d0d8e8;
+      border-radius: 20px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .mesh-btn:hover { background: #ebf3ff; border-color: #93c5fd; color: #3273dc; }
+    .mesh-btn.active {
+      background: linear-gradient(135deg, #3273dc, #5b9cf6);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 2px 8px rgba(50,115,220,0.35);
+    }
+    .mesh-hint {
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-top: 0.5rem;
+    }
+
+    /* ── Video Comparison Slider ── */
+    .video-compare-wrap {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      cursor: col-resize;
+      user-select: none;
+      transition: box-shadow 0.2s ease;
+    }
+    .video-compare-wrap:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.22); }
+    .video-compare-wrap video {
+      display: block;
+      width: 100%;
+      height: auto;
+      pointer-events: none;
+    }
+    .video-compare-wrap .vc-right {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      clip-path: inset(0 50% 0 0);
+    }
+    .vc-divider {
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 50%;
+      width: 2px;
+      background: rgba(255,255,255,0.9);
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .vc-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px; height: 40px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+      z-index: 11;
+    }
+    .vc-handle::before,
+    .vc-handle::after {
+      content: '';
+      display: block;
+      width: 0; height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+    }
+    .vc-handle::before {
+      border-right: 8px solid #3273dc;
+      margin-right: 4px;
+    }
+    .vc-handle::after {
+      border-left: 8px solid #3273dc;
+    }
+    .vc-label-left, .vc-label-right {
+      position: absolute;
+      top: 10px;
+      padding: 4px 12px;
+      background: rgba(15,23,42,0.72);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 20px;
+      pointer-events: none;
+      z-index: 12;
+    }
+    .vc-label-left  { left:  10px; }
+    .vc-label-right { right: 10px; }
+
+    /* ── Method block ── */
+    .method-block {
+      background: #f4f8ff;
+      border-left: 4px solid #3273dc;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      border-radius: 0 8px 8px 0;
+      box-shadow: 0 1px 4px rgba(50,115,220,0.08);
+    }
+    .method-block strong { color: #3273dc; }
+
+    /* ── Ablation divider ── */
+    .ablation-divider {
+      margin: 3rem 0;
+      border: none;
+      border-top: 1px solid #e8edf5;
+    }
+
+    /* ── Section alternating bg ── */
+    section.section.hero.is-light { background: #f7f9fc !important; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Hero ──────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+
+          <h1 class="title is-1 publication-title">
+            Multi-Canonical Dynamic Gaussian Splatting<br>
+            for Accurate Geometry and High-Fidelity Rendering
+          </h1>
+
+          <!-- TODO: Uncomment and fill in venue when accepted -->
+          <!-- <h2 class="title is-3">IEEE TIP 2025</h2> -->
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="#" target="_blank">Seungjae Lee</a><sup>1</sup>,&nbsp;
+            </span>
+            <span class="author-block">
+              <a href="#" target="_blank">Ho Jun Kim</a><sup>1</sup>,&nbsp;
+            </span>
+            <span class="author-block">
+              <a href="#" target="_blank">Hak Gu Kim</a><sup>1,†</sup>
+            </span>
+          </div>
+
+          <div class="is-size-6 publication-authors" style="margin-top: 0.5rem;">
+            <span class="eql-cntrb"><sup>1</sup>Department of Metaverse Convergence, Chung-Ang University, South Korea</span>
+            &nbsp;&nbsp;
+            <span class="eql-cntrb"><sup>†</sup>Corresponding Author</span>
+          </div>
+
+
+
+          <!-- Links -->
+          <div class="column has-text-centered" style="margin-top: 0.5rem;">
+            <div class="publication-links">
+              <!-- Paper -->
+              <span class="link-block">
+                <a href="https://github.com/cau-irislab/MC-DGS" target="_blank"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper (Coming Soon)</span>
+                </a>
+              </span>
+
+              <!-- GitHub -->
+              <span class="link-block">
+                <a href="https://github.com/cau-irislab/MC-DGS" target="_blank"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code (Coming Soon)</span>
+                </a>
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Teaser Image ──────────────────────────────────────────────────────── -->
+<section class="hero teaser">
+  <div class="container is-max-desktop">
+    <div class="hero-body">
+      <figure class="image">
+        <img src="static/images/fig_teaser.png"
+             alt="Our method achieves both high-fidelity rendering and geometrically accurate mesh reconstruction, resolving the trade-off inherent in prior dynamic Gaussian Splatting methods.">
+      </figure>
+      <h2 class="subtitle has-text-centered" style="margin-top: 1.5rem;">
+        Existing dynamic Gaussian Splatting methods face a persistent trade-off between rendering quality and mesh accuracy.
+        Our method resolves this by jointly improving both, yielding sharp renderings and clean mesh geometry across diverse dynamic scenes.
+      </h2>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Abstract ─────────────────────────────────────────────────────────── -->
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            While 3D Gaussian Splatting (3DGS) has enabled high-quality reconstruction of dynamic scenes,
+            a persistent tension remains between Novel View Synthesis (NVS) fidelity and mesh geometric accuracy.
+            We argue that this arises because deformation modeling, surface alignment, and appearance expressiveness
+            compete for shared representational degrees of freedom. To mitigate this rendering–geometry trade-off,
+            we propose <strong>Multi-Canonical Dynamic Gaussian Splatting</strong>.
+          </p>
+          <p>
+            <strong>Multi-Canonical Deformation Modeling (MCDM)</strong> partitions the sequence into localized
+            temporal segments to reduce motion over-smoothing.
+            <strong>Surface-Aligned Anisotropic Densification (SAAD)</strong> initializes 2D Gaussians with scales
+            and rotations derived from local face geometry for more faithful surface support.
+            <strong>Residual-Based Expressiveness Restoration (RBER)</strong> restores fine appearance details
+            through sequential 3D and 2D residual refinement on top of a geometry-stabilized base.
+            Experiments on DG-Mesh, D-NeRF, and Nerfies show that our method improves the rendering–geometry
+            balance, yielding consistent gains in rendering quality while preserving or improving mesh accuracy.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Video Results ────────────────────────────────────────────────────── -->
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Video Results</h2>
+    <p class="has-text-centered" style="margin-bottom: 2rem; color: #555;">
+      Each video shows our reconstructed dynamic scene (Gaussian rendering + mesh) across time.
+    </p>
+
+    <div class="columns is-multiline video-grid">
+      <div class="column is-half has-text-centered">
+        <p class="video-label">Girlwalk</p>
+        <video autoplay controls muted loop width="100%">
+          <source src="static/videos/video_girlwalk.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="column is-half has-text-centered">
+        <p class="video-label">Hook</p>
+        <video autoplay controls muted loop width="100%">
+          <source src="static/videos/video_hook.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="column is-half has-text-centered">
+        <p class="video-label">Jumping Jacks</p>
+        <video autoplay controls muted loop width="100%">
+          <source src="static/videos/video_jumpingjacks.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="column is-half has-text-centered">
+        <p class="video-label">Stand Up</p>
+        <video autoplay controls muted loop width="100%">
+          <source src="static/videos/video_standup.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Video Comparison Slider ──────────────────────────────────────────── -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Video Comparison</h2>
+    <p class="has-text-centered" style="margin-bottom: 2rem; color: #555;">
+      Drag the divider left or right to compare our method with DG-Mesh.
+    </p>
+
+    <div class="columns is-multiline video-grid">
+      <!-- Horse -->
+      <div class="column is-one-third has-text-centered">
+        <p class="video-label">Horse</p>
+        <div class="video-compare-wrap" data-compare>
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/comparison/horse_ours.mp4" type="video/mp4">
+          </video>
+          <video class="vc-right" autoplay muted loop playsinline>
+            <source src="static/videos/comparison/horse_dgmesh.mp4" type="video/mp4">
+          </video>
+          <div class="vc-divider"></div>
+          <div class="vc-handle"></div>
+          <span class="vc-label-left">DG-Mesh</span>
+          <span class="vc-label-right">Ours</span>
+        </div>
+      </div>
+      <!-- Beagle -->
+      <div class="column is-one-third has-text-centered">
+        <p class="video-label">Beagle</p>
+        <div class="video-compare-wrap" data-compare>
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/comparison/beagle_ours.mp4" type="video/mp4">
+          </video>
+          <video class="vc-right" autoplay muted loop playsinline>
+            <source src="static/videos/comparison/beagle_dgmesh.mp4" type="video/mp4">
+          </video>
+          <div class="vc-divider"></div>
+          <div class="vc-handle"></div>
+          <span class="vc-label-left">DG-Mesh</span>
+          <span class="vc-label-right">Ours</span>
+        </div>
+      </div>
+      <!-- Bird -->
+      <div class="column is-one-third has-text-centered">
+        <p class="video-label">Bird</p>
+        <div class="video-compare-wrap" data-compare>
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/comparison/bird_ours.mp4" type="video/mp4">
+          </video>
+          <video class="vc-right" autoplay muted loop playsinline>
+            <source src="static/videos/comparison/bird_dgmesh.mp4" type="video/mp4">
+          </video>
+          <div class="vc-divider"></div>
+          <div class="vc-handle"></div>
+          <span class="vc-label-left">DG-Mesh</span>
+          <span class="vc-label-right">Ours</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 3D Mesh Viewer ──────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">3D Mesh Results</h2>
+    <p class="has-text-centered" style="margin-bottom: 2rem; color: #555;">
+      Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan
+    </p>
+    <div class="columns is-multiline video-grid">
+      <div class="column is-one-third has-text-centered">
+        <p class="video-label">Bird</p>
+        <div class="mesh-viewer-wrap" data-ply-base="static/mesh/bird" data-frames="3"></div>
+        <div class="mesh-frame-btns" data-target="0">
+          <button class="mesh-btn active" data-frame="1">Frame 1</button>
+          <button class="mesh-btn" data-frame="2">Frame 2</button>
+          <button class="mesh-btn" data-frame="3">Frame 3</button>
+        </div>
+        <p class="mesh-hint">drag / scroll / right-drag</p>
+      </div>
+      <div class="column is-one-third has-text-centered">
+        <p class="video-label">Duck</p>
+        <div class="mesh-viewer-wrap" data-ply-base="static/mesh/duck" data-frames="3"></div>
+        <div class="mesh-frame-btns" data-target="1">
+          <button class="mesh-btn active" data-frame="1">Frame 1</button>
+          <button class="mesh-btn" data-frame="2">Frame 2</button>
+          <button class="mesh-btn" data-frame="3">Frame 3</button>
+        </div>
+        <p class="mesh-hint">drag / scroll / right-drag</p>
+      </div>
+      <div class="column is-one-third has-text-centered">
+        <p class="video-label">T-Rex</p>
+        <div class="mesh-viewer-wrap" data-ply-base="static/mesh/trex" data-frames="3"></div>
+        <div class="mesh-frame-btns" data-target="2">
+          <button class="mesh-btn active" data-frame="1">Frame 1</button>
+          <button class="mesh-btn" data-frame="2">Frame 2</button>
+          <button class="mesh-btn" data-frame="3">Frame 3</button>
+        </div>
+        <p class="mesh-hint">drag / scroll / right-drag</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="module">
+import * as THREE from 'three';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+var viewers = [];
+
+document.querySelectorAll('.mesh-viewer-wrap[data-ply-base]').forEach(function(wrap, idx) {
+  var plyBase = wrap.getAttribute('data-ply-base');
+
+  // Renderer
+  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  wrap.appendChild(renderer.domElement);
+
+  // Scene / Camera
+  var scene  = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1f2e);
+  var camera = new THREE.PerspectiveCamera(45, 1, 0.001, 1000);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  var d1 = new THREE.DirectionalLight(0xffffff, 1.5);
+  d1.position.set(2, 3, 3);
+  scene.add(d1);
+  var d2 = new THREE.DirectionalLight(0xccddff, 0.6);
+  d2.position.set(-2, -1, -2);
+  scene.add(d2);
+
+  // Controls
+  var controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor  = 0.08;
+
+  // Resize observer
+  var ro = new ResizeObserver(function(entries) {
+    var e = entries[0].contentRect;
+    renderer.setSize(e.width, e.height, false);
+    camera.aspect = e.width / e.height;
+    camera.updateProjectionMatrix();
+  });
+  ro.observe(wrap);
+
+  // Render loop
+  (function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  })();
+
+  var currentMesh = null;
+  var loader = new PLYLoader();
+
+  function loadFrame(frameNum) {
+    var url = plyBase + '_frame' + frameNum + '.ply';
+    loader.load(url, function(geometry) {
+      geometry.computeVertexNormals();
+      var mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.55, metalness: 0.05 });
+      var mesh = new THREE.Mesh(geometry, mat);
+
+      geometry.computeBoundingBox();
+      var center = new THREE.Vector3();
+      geometry.boundingBox.getCenter(center);
+      mesh.position.sub(center);
+
+      var size = new THREE.Vector3();
+      geometry.boundingBox.getSize(size);
+      var scale = 2.0 / Math.max(size.x, size.y, size.z);
+      mesh.scale.setScalar(scale);
+
+      if (currentMesh) {
+        scene.remove(currentMesh);
+        currentMesh.geometry.dispose();
+        currentMesh.material.dispose();
+      }
+      currentMesh = mesh;
+      scene.add(mesh);
+      camera.position.set(0, 0, 3);
+      controls.update();
+    });
+  }
+
+  viewers[idx] = { loadFrame: loadFrame };
+  loadFrame(1);
+});
+
+// Frame button events
+document.querySelectorAll('.mesh-frame-btns').forEach(function(btns) {
+  var idx = parseInt(btns.getAttribute('data-target'));
+  btns.querySelectorAll('.mesh-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btns.querySelectorAll('.mesh-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      viewers[idx].loadFrame(parseInt(btn.getAttribute('data-frame')));
+    });
+  });
+});
+</script>
+
+<script>
+(function () {
+  function initCompare(wrap) {
+    var pct = 50;
+    var right  = wrap.querySelector('.vc-right');
+    var divider = wrap.querySelector('.vc-divider');
+    var handle  = wrap.querySelector('.vc-handle');
+    var dragging = false;
+
+    // sync video playback
+    var vids = wrap.querySelectorAll('video');
+    vids[0].addEventListener('timeupdate', function () {
+      if (Math.abs(vids[1].currentTime - vids[0].currentTime) > 0.15)
+        vids[1].currentTime = vids[0].currentTime;
+    });
+
+    function update(x) {
+      var rect = wrap.getBoundingClientRect();
+      pct = Math.max(2, Math.min(98, (x - rect.left) / rect.width * 100));
+      var invPct = (100 - pct).toFixed(2) + '%';
+      right.style.clipPath   = 'inset(0 ' + invPct + ' 0 0)';
+      divider.style.left = pct.toFixed(2) + '%';
+      handle.style.left  = pct.toFixed(2) + '%';
+    }
+
+    wrap.addEventListener('mousedown',  function (e) { dragging = true; update(e.clientX); e.preventDefault(); });
+    wrap.addEventListener('touchstart', function (e) { dragging = true; update(e.touches[0].clientX); }, {passive:true});
+    window.addEventListener('mousemove',  function (e) { if (dragging) update(e.clientX); });
+    window.addEventListener('touchmove',  function (e) { if (dragging) update(e.touches[0].clientX); }, {passive:true});
+    window.addEventListener('mouseup',    function () { dragging = false; });
+    window.addEventListener('touchend',   function () { dragging = false; });
+  }
+
+  document.querySelectorAll('[data-compare]').forEach(initCompare);
+})();
+</script>
+
+<!-- ─── Method ───────────────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Method</h2>
+    <figure class="image" style="margin-bottom: 2.5rem;">
+      <img src="static/images/fig_method.png"
+           alt="Overview of the proposed framework integrating MCDM, SAAD, and RBER.">
+    </figure>
+    <div class="content has-text-justified">
+      <p>
+        Our pipeline integrates three core modules that progressively decouple the competing objectives
+        in dynamic Gaussian reconstruction — temporal deformation span, geometry-support formation,
+        and residual appearance modeling.
+      </p>
+
+      <div class="method-block">
+        <strong>① Multi-Canonical Deformation Modeling (MCDM)</strong><br>
+        Addresses excessive temporal deformation span by partitioning the sequence into K localized
+        temporal groups, each assigned to an independent canonical Gaussian set. A global warm-up stage
+        first establishes a sequence-level prior, which is then cloned into K group-specific canonical sets.
+        Since each set covers only a restricted temporal segment, the deformation network operates over a
+        reduced motion range, mitigating over-smoothing and improving per-frame fidelity.
+      </div>
+
+      <div class="method-block">
+        <strong>② Surface-Aligned Anisotropic Densification (SAAD)</strong><br>
+        Corrects the geometry-driven bias of conventional isotropic densification under mesh supervision.
+        Instead of inserting primitives at face centroids with isotropic scales, SAAD derives the initial
+        covariance of each new Gaussian from the eigendecomposition of local face vertex covariance,
+        aligning its tangent-plane support with the local surface structure. This turns densification from
+        a purely coverage-seeking operation into a surface-aligned refinement process, improving both
+        geometric coverage and mesh accuracy.
+      </div>
+
+      <div class="method-block">
+        <strong>③ Residual-Based Expressiveness Restoration (RBER)</strong><br>
+        Recovers the fine-scale appearance capacity attenuated by strong surface supervision. Built on top
+        of the geometry-stabilized base, RBER employs two sequential residual stages: a 3D Gaussian
+        deformation residual network (<em>f<sub>DR</sub></em>) that applies local parameter corrections to each
+        Gaussian, followed by a 2D image residual branch using a Local Texture Estimator (<em>f<sub>LTE</sub></em>)
+        that recovers remaining high-frequency texture discrepancy. This restores appearance details
+        without compromising the geometric consistency established by MCDM and SAAD.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Qualitative Comparison ───────────────────────────────────────────── -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Qualitative Comparison</h2>
+    <figure class="image" style="margin-bottom: 2rem;">
+      <img src="static/images/fig_qualitative_comparison.png"
+           alt="Qualitative comparison with DG-Mesh and Dynamic-2DGS on DG-Mesh and D-NeRF datasets.">
+    </figure>
+    <div class="content has-text-justified">
+      <p>
+        We compare against state-of-the-art dynamic reconstruction methods — DG-Mesh and Dynamic-2DGS —
+        on the DG-Mesh and D-NeRF datasets. For each method, we show both the direct Gaussian Splatting (GS)
+        rendering and the extracted mesh surface.
+        DG-Mesh yields blurry renderings, and Dynamic-2DGS produces fragmented or incomplete surfaces
+        (e.g., missing parts in <em>Horse</em>).
+        Our method reconstructs sharp appearances with topologically clean meshes, achieving superior
+        performance in both rendering fidelity and geometric accuracy.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Ablation Studies ─────────────────────────────────────────────────── -->
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Ablation Study</h2>
+
+    <!-- Ablation 1 -->
+    <div class="columns is-centered" style="margin-top: 2rem;">
+      <div class="column is-four-fifths has-text-centered">
+        <h3 class="title is-4">Effectiveness of MCDM</h3>
+        <figure class="image" style="margin-bottom: 1.5rem;">
+          <img src="static/images/ablation1.png"
+               alt="Ablation on MCDM: baseline vs. multi-canonical deformation across an extended temporal sequence.">
+        </figure>
+        <div class="content has-text-justified">
+          <p>
+            We compare the baseline (single canonical space) against MCDM (multiple canonical spaces)
+            across an extended temporal sequence (T = 0, …, 10).
+            The baseline forces a single canonical representation to span the entire motion range,
+            causing the deformation network to over-smooth time-specific structures, leading to blurred
+            renderings and incoherent geometry.
+            MCDM redistributes temporal modeling burden across K canonical sets.
+            Since each canonical set covers only a localized segment, per-frame fidelity improves
+            substantially, yielding sharper appearances and more coherent mesh reconstruction.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ablation-divider">
+
+    <!-- Ablation 2 -->
+    <div class="columns is-centered">
+      <div class="column is-four-fifths has-text-centered">
+        <h3 class="title is-4">Effectiveness of SAAD</h3>
+        <figure class="image" style="margin-bottom: 1.5rem;">
+          <img src="static/images/ablation2.png"
+               alt="Ablation on SAAD: isotropic densification vs. surface-aligned anisotropic densification.">
+        </figure>
+        <div class="content has-text-justified">
+          <p>
+            We compare isotropic densification (baseline) against our Surface-Aligned Anisotropic
+            Densification (SAAD). Under mesh supervision, isotropic primitives inserted at face centroids
+            ignore local surface anisotropy, progressively degrading rendering quality as they accumulate
+            (visible blur at 10k → 25k iterations).
+            SAAD derives the initial covariance of each new Gaussian from local face vertex statistics
+            via eigendecomposition, producing surface-aligned primitives that preserve structural detail.
+            The result is sharper boundaries and cleaner local structure throughout training.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── BibTeX ───────────────────────────────────────────────────────────── -->
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@article{TODO,
+  author  = {TODO},
+  title   = {Multi-Canonical Dynamic Gaussian Splatting for Accurate Geometry and High-Fidelity Rendering},
+  journal = {TODO},
+  year    = {2025}
+}</code></pre>
+  </div>
+</section>
+
+<!-- ─── Footer ───────────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content has-text-centered">
+          <p>
+            This page was built using the <a href="https://github.com/vinthony/academic-project-page-template-jekyll" target="_blank">Academic Project Page Template</a> adopted from the <a href="https://nerfies.github.io/" target="_blank">Nerfies</a> project page. Licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
